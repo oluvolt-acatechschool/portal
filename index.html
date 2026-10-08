@@ -152,6 +152,7 @@ h2,h3{color:var(--nav);margin-top:0}
 
     <!-- HOME: branding + hidden logo -> secret Admin/Teacher menu -->
     <section id="tab-home" class="panel">
+      <div id="noticeBoard" class="hidden" style="margin-bottom:16px"></div>
       <div id="bannerCarousel" style="position:relative;width:100%;border-radius:10px;overflow:hidden;margin-bottom:18px;background:#e7edf2">
         <img id="bannerImg0" class="carousel-slide active" alt="School banner">
         <img id="bannerImg1" class="carousel-slide" alt="School banner">
@@ -201,7 +202,7 @@ h2,h3{color:var(--nav);margin-top:0}
       <h2>Student Login</h2>
       <div class="field" style="margin-bottom:12px">
         <label for="studentIdInput">Student ID</label>
-        <input id="studentIdInput" type="text" autocomplete="username" placeholder="e.g. OLAS-26-04007">
+        <input id="studentIdInput" type="text" autocomplete="username" placeholder="e.g. OLAS2604007">
       </div>
       <div class="field" style="margin-bottom:12px">
         <label for="studentSurnameInput">Password</label>
@@ -219,18 +220,18 @@ h2,h3{color:var(--nav);margin-top:0}
       <h2>Parent Module</h2>
       <div class="warn">Full parent access (viewing your child's report, etc.) is coming in a future update.</div>
 
-      <div class="subcard">
+      <div class="subcard" id="parentFormBox">
         <h3>Log a Complaint or Question</h3>
-        <div class="info">No login needed — just fill this in and the school will follow up.</div>
+        <div class="info">Only parents whose phone number is registered with the school can send a complaint. Use the father's or mother's phone number the school has on file.</div>
         <div class="formgrid">
-          <div class="field"><label for="parentName">Your Name</label><input id="parentName" type="text"></div>
-          <div class="field"><label for="parentContact">Phone or Email</label><input id="parentContact" type="text"></div>
-          <div class="field"><label for="parentStudentRef">Student's Name/Class (optional)</label><input id="parentStudentRef" type="text"></div>
+          <div class="field"><label for="parentName">Your Name</label><input id="parentName" type="text" maxlength="80"></div>
+          <div class="field"><label for="parentContact">Father's or Mother's Phone Number (required, as the school has it on file)</label><input id="parentContact" type="tel" inputmode="tel" maxlength="20" placeholder="e.g. 08012345678"></div>
+          <div class="field"><label for="parentStudentRef">Student's Name/Class (optional)</label><input id="parentStudentRef" type="text" maxlength="80"></div>
         </div>
-        <div class="field" style="margin-top:10px"><label for="parentSubject">Subject</label><input id="parentSubject" type="text"></div>
+        <div class="field" style="margin-top:10px"><label for="parentSubject">Subject</label><input id="parentSubject" type="text" maxlength="120"></div>
         <div class="field" style="margin-top:10px">
           <label for="parentMessage">Message</label>
-          <textarea id="parentMessage" rows="4" style="width:100%;padding:11px;border:1px solid #bfc6cc;border-radius:7px"></textarea>
+          <textarea id="parentMessage" rows="4" maxlength="1000" style="width:100%;padding:11px;border:1px solid #bfc6cc;border-radius:7px"></textarea>
         </div>
         <button id="submitParentTicketBtn" class="btn primary" style="margin-top:8px">Submit</button>
         <div id="parentTicketError" class="warn hidden"></div>
@@ -250,7 +251,7 @@ h2,h3{color:var(--nav);margin-top:0}
       <div class="formgrid">
         <div class="field">
           <label for="regAdmissionNo">Student ID</label>
-          <input id="regAdmissionNo" type="text" placeholder="e.g. OLAS-26-04007">
+          <input id="regAdmissionNo" type="text" placeholder="e.g. OLAS2604007">
         </div>
         <div class="field">
           <label for="regFullName">Full Name (must match exactly)</label>
@@ -320,7 +321,7 @@ h2,h3{color:var(--nav);margin-top:0}
       <div id="examLoginBox">
         <div class="field" style="margin-bottom:12px">
           <label for="examIdInput">Student ID</label>
-          <input id="examIdInput" type="text" placeholder="e.g. OLAS-26-04007">
+          <input id="examIdInput" type="text" placeholder="e.g. OLAS2604007">
         </div>
         <div class="field" style="margin-bottom:12px">
           <label for="examPasswordInput">Password</label>
@@ -335,8 +336,14 @@ h2,h3{color:var(--nav);margin-top:0}
       <div id="examTakeBox" class="hidden" style="margin-top:16px">
         <h3 id="examTakeTitle"></h3>
         <div id="examTimerBox" class="warn hidden" style="font-weight:700;text-align:center"></div>
+        <div id="examCalcContainer"></div>
         <div id="examQuestionsBox"></div>
-        <button id="submitExamBtn" class="btn success" style="margin-top:12px">Submit Exam</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <button id="examPrevBtn" class="btn secondary">Previous</button>
+          <span id="examProgress" style="color:var(--muted);font-size:13px"></span>
+          <button id="examNextBtn" class="btn primary">Next</button>
+        </div>
+        <button id="submitExamBtn" class="btn success hidden" style="margin-top:12px;width:100%">Submit Exam</button>
       </div>
 
       <div id="examDoneBox" class="hidden info" style="margin-top:16px">
@@ -434,8 +441,14 @@ h2,h3{color:var(--nav);margin-top:0}
       <div id="cbtStudentTakeBox" class="hidden" style="margin-top:16px">
         <h3 id="cbtTakeTitle"></h3>
         <div id="cbtTimerBox" class="warn hidden" style="font-weight:700;text-align:center"></div>
+        <div id="cbtCalcContainer"></div>
         <div id="cbtQuestionsBoxStudent"></div>
-        <button id="submitCbtAttemptBtn" class="btn success" style="margin-top:12px">Submit</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <button id="cbtPrevBtn" class="btn secondary">Previous</button>
+          <span id="cbtProgress" style="color:var(--muted);font-size:13px"></span>
+          <button id="cbtNextBtn" class="btn primary">Next</button>
+        </div>
+        <button id="submitCbtAttemptBtn" class="btn success hidden" style="margin-top:12px;width:100%">Submit</button>
       </div>
 
       <div id="cbtResultBox" class="hidden info" style="margin-top:16px;font-weight:700"></div>
@@ -533,6 +546,7 @@ h2,h3{color:var(--nav);margin-top:0}
         <div class="dashboard-card nav-card" data-view="history"><div style="font-size:26px">🕘</div>History</div>
         <div class="dashboard-card nav-card" data-view="exams"><div style="font-size:26px">🖊️</div>Exams</div>
         <div class="dashboard-card nav-card" data-view="cbt"><div style="font-size:26px">💻</div>CBT Practice</div>
+        <div class="dashboard-card nav-card" data-view="notices"><div style="font-size:26px">📢</div>Notices</div>
         <div class="dashboard-card nav-card" data-view="helpdesk" style="position:relative">
           <div style="font-size:26px">🛎️</div>Help Desk
           <span id="ticketBadge" class="hidden" style="position:absolute;top:6px;right:6px;background:var(--danger);color:#fff;border-radius:50%;min-width:20px;height:20px;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 4px">0</span>
@@ -670,7 +684,7 @@ h2,h3{color:var(--nav);margin-top:0}
         </div>
         <div class="field">
           <label for="studentIdLookup">Or jump to a Student ID</label>
-          <input id="studentIdLookup" type="text" placeholder="e.g. OLAS-26-04007">
+          <input id="studentIdLookup" type="text" placeholder="e.g. OLAS2604007">
         </div>
       </div>
       <button id="lookupIdBtn" class="btn secondary">Go to Student</button>
@@ -882,6 +896,10 @@ h2,h3{color:var(--nav);margin-top:0}
             <label for="cbtQuestionsPerAttempt">Questions per Attempt</label>
             <input id="cbtQuestionsPerAttempt" type="number" min="1" value="20">
           </div>
+          <div class="field">
+            <label for="cbtMaxAttempts">Max Attempts (blank = unlimited)</label>
+            <input id="cbtMaxAttempts" type="number" min="1" placeholder="e.g. 3">
+          </div>
         </div>
         <button id="createCbtBtn" class="btn primary" style="margin-top:8px">Create Quiz Bank</button>
       </div>
@@ -940,6 +958,41 @@ h2,h3{color:var(--nav);margin-top:0}
       </div>
     </section>
 
+    <!-- NOTICES -->
+    <section id="noticesView" class="panel view hidden">
+      <h2>Notices</h2>
+      <div class="info">
+        Post announcements that appear on the home page for everyone to see. Unpublish or
+        delete a notice at any time. Set an expiry date and it hides itself automatically.
+      </div>
+
+      <div class="subcard">
+        <h3>New Notice</h3>
+        <div class="field"><label for="noticeTitle">Title</label><input id="noticeTitle" type="text" placeholder="e.g. Resumption Date"></div>
+        <div class="field" style="margin-top:8px">
+          <label for="noticeBody">Message</label>
+          <textarea id="noticeBody" rows="4" style="width:100%;padding:11px;border:1px solid #bfc6cc;border-radius:7px"></textarea>
+        </div>
+        <div class="formgrid" style="margin-top:8px">
+          <div class="field">
+            <label for="noticeExpires">Hide after (optional)</label>
+            <input id="noticeExpires" type="date">
+          </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input id="noticePublishNow" type="checkbox" checked style="width:auto"> Publish immediately
+            </label>
+          </div>
+        </div>
+        <button id="postNoticeBtn" class="btn primary" style="margin-top:10px">Post Notice</button>
+      </div>
+
+      <div class="subcard">
+        <h3>All Notices</h3>
+        <div id="noticesList"></div>
+      </div>
+    </section>
+
     <!-- HELP DESK -->
     <section id="helpdeskView" class="panel view hidden">
       <h2>Help Desk</h2>
@@ -990,6 +1043,17 @@ h2,h3{color:var(--nav);margin-top:0}
         <div class="field"><label>Class Teacher's Title</label><input id="teacherTitle"></div>
         <div class="field"><label>Class Teacher's Name</label><input id="teacherName"></div>
       </div>
+
+      <h3>Footer Content (shown at the bottom of the home page)</h3>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input id="setAboutEnabled" type="checkbox" style="width:auto"> Show vision, mission, contact, anthem and pledge in the footer
+        </label>
+      </div>
+      <div class="field" style="margin-top:8px"><label for="setVision">Vision</label><textarea id="setVision" rows="2" style="width:100%;padding:11px;border:1px solid #bfc6cc;border-radius:7px"></textarea></div>
+      <div class="field" style="margin-top:8px"><label for="setMission">Mission</label><textarea id="setMission" rows="2" style="width:100%;padding:11px;border:1px solid #bfc6cc;border-radius:7px"></textarea></div>
+      <div class="field" style="margin-top:8px"><label for="setAnthem">School Anthem</label><textarea id="setAnthem" rows="5" style="width:100%;padding:11px;border:1px solid #bfc6cc;border-radius:7px"></textarea></div>
+      <div class="field" style="margin-top:8px"><label for="setPledge">School Pledge</label><textarea id="setPledge" rows="4" style="width:100%;padding:11px;border:1px solid #bfc6cc;border-radius:7px"></textarea></div>
 
       <button id="saveSettingsBtn" class="btn success">Save Settings</button>
     </section>
@@ -1417,6 +1481,9 @@ function renderExamListForStudent(exams){
 
 let examTimerInterval = null;
 
+let examCardIndex = 0;
+let examCardCount = 0;
+
 async function startExam(examId){
   const { data, error } = await supa.rpc("get_exam_questions", {
     p_admission_no: examSession.admissionNo, p_password: examSession.password, p_exam_id: examId
@@ -1433,8 +1500,9 @@ async function startExam(examId){
   $("examTakeBox").dataset.examId = examId;
 
   $("examQuestionsBox").innerHTML = data.questions.map((q, i) => `
-    <div class="panel" style="margin-bottom:10px">
-      <strong>${i+1}. ${esc(q.question_text)}</strong>
+    <div class="panel question-card" data-qindex="${i}" style="${i === 0 ? '' : 'display:none'}">
+      <strong>Question ${i+1} of ${data.questions.length}</strong>
+      <p>${esc(q.question_text)}</p>
       <div style="margin-top:8px">
         <label style="display:block"><input type="radio" name="q${q.id}" value="a"> ${esc(q.option_a)}</label>
         <label style="display:block"><input type="radio" name="q${q.id}" value="b"> ${esc(q.option_b)}</label>
@@ -1443,6 +1511,10 @@ async function startExam(examId){
       </div>
     </div>
   `).join("");
+
+  examCardIndex = 0;
+  examCardCount = data.questions.length;
+  updateExamCardNav();
 
   clearInterval(examTimerInterval);
   const timerBox = $("examTimerBox");
@@ -1497,8 +1569,30 @@ async function doSubmitExam(){
 
 $("submitExamBtn").onclick = doSubmitExam;
 
+function updateExamCardNav(){
+  document.querySelectorAll("#examQuestionsBox .question-card").forEach(card => {
+    card.style.display = (Number(card.dataset.qindex) === examCardIndex) ? "" : "none";
+  });
+  $("examProgress").textContent = `${examCardIndex + 1} / ${examCardCount}`;
+  $("examPrevBtn").disabled = (examCardIndex === 0);
+
+  const isLast = examCardIndex === examCardCount - 1;
+  $("examNextBtn").classList.toggle("hidden", isLast);
+  $("submitExamBtn").classList.toggle("hidden", !isLast);
+}
+
+$("examPrevBtn").onclick = () => {
+  if(examCardIndex > 0){ examCardIndex--; updateExamCardNav(); }
+};
+$("examNextBtn").onclick = () => {
+  if(examCardIndex < examCardCount - 1){ examCardIndex++; updateExamCardNav(); }
+};
+
+
 /* ================= CBT PRACTICE (student) ================= */
 let cbtTimerInterval = null;
+let cbtCardIndex = 0;
+let cbtCardCount = 0;
 let currentCbtAttemptId = null;
 
 async function renderCbtListForStudent(){
@@ -1520,16 +1614,22 @@ async function renderCbtListForStudent(){
     return;
   }
 
-  box.innerHTML = quizzes.map(q => `
+  box.innerHTML = quizzes.map(q => {
+    const limitReached = q.max_attempts != null && q.attempt_count >= q.max_attempts;
+    const attemptsLabel = q.max_attempts != null
+      ? `${q.attempt_count} / ${q.max_attempts} attempts used`
+      : `Attempted ${q.attempt_count} time(s)`;
+    return `
     <div class="student-card">
       <span><strong>${esc(q.title)}</strong> <span class="tag">${esc(q.subject)}</span>
-        <br><small style="color:var(--muted)">${q.questions_per_attempt} questions${q.duration_minutes ? ' · ' + q.duration_minutes + ' min' : ''} · Attempted ${q.attempt_count} time(s)</small>
+        <br><small style="color:var(--muted)">${q.questions_per_attempt} questions${q.duration_minutes ? ' · ' + q.duration_minutes + ' min' : ''} · ${attemptsLabel}</small>
       </span>
-      <button class="btn primary start-cbt-btn" data-id="${q.id}">Start Practice</button>
+      <button class="btn primary start-cbt-btn" data-id="${q.id}" ${limitReached ? "disabled" : ""}>${limitReached ? "No Attempts Left" : "Start Practice"}</button>
     </div>
-  `).join("");
+  `;
+  }).join("");
 
-  box.querySelectorAll(".start-cbt-btn").forEach(btn => {
+  box.querySelectorAll(".start-cbt-btn:not([disabled])").forEach(btn => {
     btn.onclick = () => startCbtAttempt(Number(btn.dataset.id));
   });
 }
@@ -1551,8 +1651,9 @@ async function startCbtAttempt(bankId){
   $("cbtTakeTitle").textContent = data.title;
 
   $("cbtQuestionsBoxStudent").innerHTML = data.questions.map((q, i) => `
-    <div class="panel" style="margin-bottom:10px">
-      <strong>${i+1}. ${esc(q.question_text)}</strong>
+    <div class="panel question-card" data-qindex="${i}" style="${i === 0 ? '' : 'display:none'}">
+      <strong>Question ${i+1} of ${data.questions.length}</strong>
+      <p>${esc(q.question_text)}</p>
       <div style="margin-top:8px">
         <label style="display:block"><input type="radio" name="cq${q.id}" value="a"> ${esc(q.option_a)}</label>
         <label style="display:block"><input type="radio" name="cq${q.id}" value="b"> ${esc(q.option_b)}</label>
@@ -1561,6 +1662,10 @@ async function startCbtAttempt(bankId){
       </div>
     </div>
   `).join("");
+
+  cbtCardIndex = 0;
+  cbtCardCount = data.questions.length;
+  updateCbtCardNav();
 
   clearInterval(cbtTimerInterval);
   const timerBox = $("cbtTimerBox");
@@ -1617,6 +1722,26 @@ async function doSubmitCbtAttempt(){
 }
 
 $("submitCbtAttemptBtn").onclick = doSubmitCbtAttempt;
+
+function updateCbtCardNav(){
+  document.querySelectorAll("#cbtQuestionsBoxStudent .question-card").forEach(card => {
+    card.style.display = (Number(card.dataset.qindex) === cbtCardIndex) ? "" : "none";
+  });
+  $("cbtProgress").textContent = `${cbtCardIndex + 1} / ${cbtCardCount}`;
+  $("cbtPrevBtn").disabled = (cbtCardIndex === 0);
+
+  const isLast = cbtCardIndex === cbtCardCount - 1;
+  $("cbtNextBtn").classList.toggle("hidden", isLast);
+  $("submitCbtAttemptBtn").classList.toggle("hidden", !isLast);
+}
+
+$("cbtPrevBtn").onclick = () => {
+  if(cbtCardIndex > 0){ cbtCardIndex--; updateCbtCardNav(); }
+};
+$("cbtNextBtn").onclick = () => {
+  if(cbtCardIndex < cbtCardCount - 1){ cbtCardIndex++; updateCbtCardNav(); }
+};
+
 
 async function renderCbtHistoryForStudent(){
   const box = $("cbtHistoryBox");
@@ -1705,6 +1830,9 @@ $("submitTicketBtn").onclick = async function(){
 };
 
 $("submitParentTicketBtn").onclick = async function(){
+  if(this.dataset.busy) return; // ignore rapid repeat taps
+  this.dataset.busy = "1";
+  setTimeout(() => delete this.dataset.busy, 5000);
   $("parentTicketError").classList.add("hidden");
   const name = $("parentName").value.trim();
   const contact = $("parentContact").value.trim();
@@ -1712,14 +1840,14 @@ $("submitParentTicketBtn").onclick = async function(){
   const subject = $("parentSubject").value.trim();
   const message = $("parentMessage").value.trim();
 
-  if(!name || !subject || !message){
-    $("parentTicketError").textContent = "Please fill in your name, subject, and message.";
+  if(!contact || !name || !subject || !message){
+    $("parentTicketError").textContent = "Please fill in your name, the registered phone number, subject, and message.";
     $("parentTicketError").classList.remove("hidden");
     return;
   }
 
   const { data, error } = await supa.rpc("submit_parent_ticket", {
-    p_name: name, p_contact: contact, p_student_reference: studentRef,
+    p_phone: contact, p_name: name, p_student_reference: studentRef,
     p_subject: subject, p_message: message
   });
 
@@ -1943,7 +2071,7 @@ async function loadAll(){
     supa.from("classes").select("*").order("name"),
     supa.from("subjects").select("*").order("name"),
     supa.from("class_subjects").select("*"),
-    supa.from("students").select("*").order("full_name"),
+    supa.from("students").select("id,full_name,surname,class_id,admission_no,is_demo,registered,password_hash,failed_login_attempts,locked_until,date_of_birth,gender,home_address,student_phone,father_name,father_phone,father_occupation,mother_name,mother_phone,mother_occupation,previous_school,previous_class").order("full_name"),
     supa.from("score_ranges").select("*")
   ]);
 
@@ -2017,6 +2145,7 @@ function showView(name){
   if(name === "history") { renderHistory(); renderPublishList(); }
   if(name === "exams") { updateExamSubjectSelect(); renderExamList(); }
   if(name === "cbt") { updateCbtSubjectSelect(); renderCbtList(); }
+  if(name === "notices") renderNoticesAdmin();
   if(name === "helpdesk") renderTickets();
 }
 document.querySelectorAll(".nav-card[data-view]").forEach(b => {
@@ -2103,11 +2232,25 @@ function renderStudentRow(row, student, i){
   row.querySelector(".remove-btn").onclick = () => renderRemoveConfirm(row, student, i);
 }
 
+const NO_PHOTO_HTML = `<div style="width:100px;height:100px;border-radius:8px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center">No Photo</div>`;
+
+// Photos are not loaded with the student list (too heavy). Fetch one on demand.
+async function loadProfilePhoto(studentId){
+  const slot = document.getElementById("profilePhoto_" + studentId);
+  if(!slot) return;
+  const { data, error } = await supa.from("students").select("passport_photo").eq("id", studentId).single();
+  const current = document.getElementById("profilePhoto_" + studentId);
+  if(!current) return; // profile was closed while loading
+  if(error || !data || !data.passport_photo){
+    current.outerHTML = NO_PHOTO_HTML;
+    return;
+  }
+  current.outerHTML = `<img src="${data.passport_photo}" alt="Passport" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`;
+}
+
 function renderStudentProfile(row, student, i){
   const klass = cache.classes.find(c => c.id === student.class_id);
-  const photoHTML = student.passport_photo
-    ? `<img src="${student.passport_photo}" alt="Passport" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`
-    : `<div style="width:100px;height:100px;border-radius:8px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center">No Photo</div>`;
+  const photoHTML = `<div id="profilePhoto_${student.id}" style="width:100px;height:100px;border-radius:8px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center">Loading photo…</div>`;
 
   const row2 = (label, value) => value ? `<div><strong>${esc(label)}:</strong> ${esc(value)}</div>` : "";
 
@@ -2136,6 +2279,7 @@ function renderStudentProfile(row, student, i){
     </div>
   `;
   row.querySelector(".back-btn").onclick = () => renderStudentRow(row, student, i);
+  loadProfilePhoto(student.id);
 }
 
 async function resetStudentPassword(student, row, i){
@@ -2153,7 +2297,7 @@ async function generateAdmissionNo(student, row, i){
   const klass = cache.classes.find(c => c.id === student.class_id);
   const code = String(klass && klass.class_code ? klass.class_code : 0).padStart(2, "0");
   const yy = String(new Date().getFullYear()).slice(-2);
-  const prefix = `OLAS-${yy}-${code}`;
+  const prefix = `OLAS${yy}${code}`;
 
   const usedCount = cache.students.filter(s => s.admission_no && s.admission_no.startsWith(prefix)).length;
   const admissionNo = `${prefix}${String(usedCount + 1).padStart(3, "0")}`;
@@ -3115,17 +3259,18 @@ $("createCbtBtn").onclick = async function(){
   const title = $("cbtTitle").value.trim();
   const duration = $("cbtDuration").value ? Number($("cbtDuration").value) : null;
   const perAttempt = Number($("cbtQuestionsPerAttempt").value) || 20;
+  const maxAttempts = $("cbtMaxAttempts").value ? Number($("cbtMaxAttempts").value) : null;
 
   if(!title){ toast("Enter a title."); return; }
 
   const { error } = await supa.from("quiz_banks").insert({
     class_id: classId, subject_id: subjectId, title,
-    duration_minutes: duration, questions_per_attempt: perAttempt,
+    duration_minutes: duration, questions_per_attempt: perAttempt, max_attempts: maxAttempts,
     session: cache.settings.session, term: cache.settings.term, is_open: false
   });
 
   if(error){ toast(error.message); return; }
-  $("cbtTitle").value = ""; $("cbtDuration").value = "";
+  $("cbtTitle").value = ""; $("cbtDuration").value = ""; $("cbtMaxAttempts").value = "";
   toast("Quiz bank created. Add questions, then open it for students.");
   renderCbtList();
 };
@@ -3148,7 +3293,7 @@ async function renderCbtList(){
     row.innerHTML = `
       <span><strong>${esc(bank.title)}</strong>
         <span class="tag ${bank.is_open ? 'live' : 'demo'}">${bank.is_open ? 'OPEN' : 'CLOSED'}</span>
-        <br><small style="color:var(--muted)">${esc(klass ? klass.name : 'All Classes')} · ${esc(subject ? subject.name : '')} · ${bank.questions_per_attempt} Qs/attempt${bank.duration_minutes ? ' · ' + bank.duration_minutes + ' min' : ''}</small>
+        <br><small style="color:var(--muted)">${esc(klass ? klass.name : 'All Classes')} · ${esc(subject ? subject.name : '')} · ${bank.questions_per_attempt} Qs/attempt${bank.duration_minutes ? ' · ' + bank.duration_minutes + ' min' : ''} · ${bank.max_attempts ? bank.max_attempts + ' attempt(s) max' : 'Unlimited attempts'}</small>
       </span>
       <span>
         <button class="btn secondary toggle-cbt-open-btn">${bank.is_open ? 'Close' : 'Open'}</button>
@@ -3286,6 +3431,78 @@ async function renderCbtAttemptsTable(){
   }).join("");
 }
 
+/* ================= NOTICES (admin) ================= */
+$("postNoticeBtn").onclick = async function(){
+  const title = $("noticeTitle").value.trim();
+  const body = $("noticeBody").value.trim();
+  const expires = $("noticeExpires").value;
+  if(!title || !body){ toast("Enter both a title and a message."); return; }
+
+  const { error } = await supa.from("announcements").insert({
+    title, body,
+    published: $("noticePublishNow").checked,
+    expires_at: expires ? new Date(expires + "T23:59:59").toISOString() : null
+  });
+
+  if(error){ toast(error.message); return; }
+  $("noticeTitle").value = "";
+  $("noticeBody").value = "";
+  $("noticeExpires").value = "";
+  toast("Notice posted.");
+  renderNoticesAdmin();
+};
+
+async function renderNoticesAdmin(){
+  const { data, error } = await supa.from("announcements").select("*").order("created_at", { ascending: false });
+  const box = $("noticesList");
+  if(error){ box.innerHTML = `<div class="empty">${esc(error.message)}</div>`; return; }
+  if(!data || data.length === 0){ box.innerHTML = '<div class="empty">No notices yet.</div>'; return; }
+
+  box.innerHTML = "";
+  data.forEach(n => {
+    const expired = n.expires_at && new Date(n.expires_at) < new Date();
+    const status = !n.published ? "DRAFT" : expired ? "EXPIRED" : "LIVE";
+    const tagClass = status === "LIVE" ? "live" : "demo";
+
+    const row = document.createElement("div");
+    row.className = "student-card";
+    row.style.alignItems = "flex-start";
+    row.innerHTML = `
+      <span style="flex:1"><strong>${esc(n.title)}</strong>
+        <span class="tag ${tagClass}">${status}</span>
+        <br><small style="color:var(--muted)">${new Date(n.created_at).toLocaleString()} · ${n.expires_at ? (expired ? "hid on " : "hides after ") + new Date(n.expires_at).toLocaleDateString() : "No expiry (stays until unpublished)"}</small>
+        <p style="margin:6px 0 0 0;white-space:pre-line">${esc(n.body)}</p>
+      </span>
+      <span>
+        <button class="btn ${n.published ? 'secondary' : 'success'} notice-toggle-btn">${n.published ? 'Unpublish' : 'Publish'}</button>
+        <button class="btn danger notice-del-btn">Delete</button>
+      </span>
+    `;
+
+    row.querySelector(".notice-toggle-btn").onclick = async () => {
+      const { error } = await supa.from("announcements").update({ published: !n.published }).eq("id", n.id);
+      if(error){ toast(error.message); return; }
+      renderNoticesAdmin();
+    };
+
+    const delBtn = row.querySelector(".notice-del-btn");
+    let armed = false;
+    delBtn.onclick = async () => {
+      if(!armed){
+        armed = true;
+        delBtn.textContent = "Confirm?";
+        setTimeout(() => { armed = false; delBtn.textContent = "Delete"; }, 4000);
+        return;
+      }
+      const { error } = await supa.from("announcements").delete().eq("id", n.id);
+      if(error){ toast(error.message); return; }
+      renderNoticesAdmin();
+    };
+
+    box.appendChild(row);
+  });
+}
+
 /* ================= HELP DESK (admin) ================= */
 async function renderTickets(){
   const filter = $("ticketFilter").value;
@@ -3303,7 +3520,7 @@ async function renderTickets(){
     const student = ticket.student_id ? cache.students.find(s => s.id === Number(ticket.student_id)) : null;
     const who = ticket.submitted_by_type === "student"
       ? `Student: ${esc(student ? student.full_name : "Unknown")} (${esc(student ? student.admission_no : "")})`
-      : `Parent: ${esc(ticket.submitter_name || "Unknown")}${ticket.submitter_contact ? " · " + esc(ticket.submitter_contact) : ""}${ticket.student_reference ? " · Re: " + esc(ticket.student_reference) : ""}`;
+      : `Parent: ${esc(ticket.submitter_name || "Unknown")}${ticket.submitter_contact ? " · " + esc(ticket.submitter_contact) : ""}${student ? " · Child: " + esc(student.full_name) + " (" + esc(student.admission_no || "") + ")" : ""}${ticket.student_reference ? " · Note: " + esc(ticket.student_reference) : ""}`;
 
     const when = new Date(ticket.created_at).toLocaleString();
     const row = document.createElement("div");
@@ -3349,6 +3566,11 @@ function fillSettingsForm(){
   const s = cache.settings; if(!s) return;
   initSessionOptions();
   $("setName").value = s.school_name;
+  $("setAboutEnabled").checked = s.about_enabled !== false;
+  $("setVision").value = s.vision || "";
+  $("setMission").value = s.mission || "";
+  $("setAnthem").value = s.anthem_text || "";
+  $("setPledge").value = s.pledge_text || "";
   $("setMotto").value = s.motto;
   $("setAddress").value = s.address;
   $("setEmail").value = s.email;
@@ -3375,7 +3597,12 @@ $("saveSettingsBtn").onclick = async function(){
     principal_title: $("principalTitle").value.trim(),
     principal_name: $("principalName").value.trim(),
     teacher_title: $("teacherTitle").value.trim(),
-    teacher_name: $("teacherName").value.trim()
+    teacher_name: $("teacherName").value.trim(),
+    about_enabled: $("setAboutEnabled").checked,
+    vision: $("setVision").value.trim() || null,
+    mission: $("setMission").value.trim() || null,
+    anthem_text: $("setAnthem").value.trim() || null,
+    pledge_text: $("setPledge").value.trim() || null
   };
 
   const { error } = await supa.from("app_settings").update(updated).eq("id", 1);
@@ -3403,6 +3630,62 @@ function setupBannerCarousel(){
   }, 10000);
 }
 
+/* ================= CALCULATOR (embedded in Exam / CBT Practice) ================= */
+function calculatorHTML(prefix){
+  return `
+    <button type="button" id="${prefix}CalcToggle" class="btn secondary no-print" style="margin-bottom:8px">🧮 Calculator</button>
+    <div id="${prefix}CalcPanel" class="panel hidden no-print" style="max-width:300px">
+      <input id="${prefix}CalcDisplay" type="text" readonly style="width:100%;padding:12px;font-size:20px;text-align:right;border:1px solid #bfc6cc;border-radius:7px;margin-bottom:8px;background:#fafbfc">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="C">C</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="(">(</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k=")">)</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="/">÷</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="7">7</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="8">8</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="9">9</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="*">×</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="4">4</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="5">5</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="6">6</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="-">−</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="1">1</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="2">2</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="3">3</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="+">+</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k="0" style="grid-column:span 2">0</button>
+        <button type="button" class="btn secondary ${prefix}-calc-btn" data-k=".">.</button>
+        <button type="button" class="btn primary ${prefix}-calc-btn" data-k="=">=</button>
+      </div>
+    </div>
+  `;
+}
+
+function wireCalculator(prefix){
+  let expr = "";
+  $(prefix + "CalcToggle").onclick = () => {
+    $(prefix + "CalcPanel").classList.toggle("hidden");
+  };
+  document.querySelectorAll("." + prefix + "-calc-btn").forEach(btn => {
+    btn.onclick = () => {
+      const k = btn.dataset.k;
+      if(k === "C"){ expr = ""; }
+      else if(k === "="){
+        try{
+          if(!/^[0-9+\-*/().\s]+$/.test(expr)) throw new Error("bad input");
+          const result = Function('"use strict"; return (' + expr + ')')();
+          expr = String(Number.isFinite(result) ? result : "Error");
+        }catch(e){
+          expr = "Error";
+        }
+      }else{
+        expr = (expr === "Error" ? "" : expr) + k;
+      }
+      $(prefix + "CalcDisplay").value = expr;
+    };
+  });
+}
+
 /* ================= BOOT ================= */
 try{
   $("siteWatermark").style.backgroundImage = `url(${SCHOOL_LOGO})`;
@@ -3410,7 +3693,118 @@ try{
   $("landingLogoImg").src = SCHOOL_LOGO;
   setupBannerCarousel();
 }catch(e){ /* logo elements missing — non-fatal, continue booting */ }
+
+$("examCalcContainer").innerHTML = calculatorHTML("exam");
+wireCalculator("exam");
+$("cbtCalcContainer").innerHTML = calculatorHTML("cbt");
+wireCalculator("cbt");
+
+async function loadPublicInfo(){
+  try{
+    const { data, error } = await supa.rpc("get_public_info");
+    if(!error && data){
+      if(data.school_name) $("footerSchoolName").textContent = data.school_name;
+
+
+      if(data.about_enabled !== false){
+        $("footerVision").textContent = data.vision || "Not added yet.";
+        $("footerMission").textContent = data.mission || "Not added yet.";
+        $("footerAnthem").textContent = data.anthem_text || "Not added yet.";
+        $("footerPledge").textContent = data.pledge_text || "Not added yet.";
+
+        const contactLines = [
+          data.address && `📍 ${esc(data.address)}`,
+          data.phone && `📞 ${esc(data.phone)}`,
+          data.email && `✉️ ${esc(data.email)}`,
+          data.website && `🌐 ${esc(data.website)}`
+        ].filter(Boolean);
+        $("footerContact").innerHTML = contactLines.length ? contactLines.join("<br>") : "Not added yet.";
+        $("footerInfo").classList.remove("hidden");
+      }else{
+        $("footerInfo").classList.add("hidden");
+      }
+    }
+  }catch(e){ /* non-fatal: landing page still works */ }
+
+  loadNoticeBoard();
+}
+
+async function loadNoticeBoard(){
+  try{
+    const { data, error } = await supa.rpc("get_public_announcements");
+    if(error || !data || data.length === 0){
+      $("noticeBoard").classList.add("hidden");
+      return;
+    }
+    const palette = [
+      ["#ff5e62", "#ff9966"],
+      ["#4b6cb7", "#182848"],
+      ["#11998e", "#38ef7d"],
+      ["#f7971e", "#ffd200"],
+      ["#8e2de2", "#4a00e0"]
+    ];
+
+    if(!document.getElementById("noticePulseStyle")){
+      const st = document.createElement("style");
+      st.id = "noticePulseStyle";
+      st.textContent = `@keyframes noticePulse {
+        0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.55); }
+        50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+      }`;
+      document.head.appendChild(st);
+    }
+
+    $("noticeBoard").innerHTML = `
+      <div style="font-size:20px;font-weight:800;color:#0b3d6e;margin:0 0 10px 2px;letter-spacing:0.3px">
+        📢 Latest Notices
+      </div>
+      ${data.map((n, i) => {
+        const [c1, c2] = palette[i % palette.length];
+        return `
+        <div style="background:linear-gradient(135deg, ${c1}, ${c2});color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,0.18);animation:noticePulse 2.4s ease-in-out infinite">
+          <div style="font-size:18px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,0.25)">${esc(n.title)}</div>
+          <div style="white-space:pre-line;margin-top:6px;font-size:15px;line-height:1.5">${esc(n.body)}</div>
+          <div style="margin-top:10px;font-size:12px;opacity:0.9">${new Date(n.created_at).toLocaleDateString()}</div>
+        </div>`;
+      }).join("")}
+    `;
+    $("noticeBoard").classList.remove("hidden");
+  }catch(e){
+    $("noticeBoard").classList.add("hidden");
+  }
+}
+loadPublicInfo();
+
 checkSession();
 </script>
+  <footer id="siteFooter" style="max-width:900px;margin:30px auto 20px;padding:20px;background:#fff;border-radius:10px;border:1px solid var(--line);font-size:14px;line-height:1.6">
+    <div id="footerInfo" class="hidden">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
+        <div>
+          <strong>Our Vision</strong>
+          <div id="footerVision" class="empty" style="text-align:left;padding:4px 0">Not added yet.</div>
+        </div>
+        <div>
+          <strong>Our Mission</strong>
+          <div id="footerMission" class="empty" style="text-align:left;padding:4px 0">Not added yet.</div>
+        </div>
+        <div>
+          <strong>Contact Us</strong>
+          <div id="footerContact" style="padding:4px 0"></div>
+        </div>
+      </div>
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-weight:700">School Anthem</summary>
+        <div id="footerAnthem" style="white-space:pre-line;padding:8px 0"></div>
+      </details>
+      <details style="margin-top:6px">
+        <summary style="cursor:pointer;font-weight:700">School Pledge</summary>
+        <div id="footerPledge" style="white-space:pre-line;padding:8px 0"></div>
+      </details>
+    </div>
+    <div style="text-align:center;color:var(--muted);margin-top:12px;font-size:12px">
+      <span id="footerSchoolName">OLUVOLT ACATECH SCHOOL</span> © 2026
+    </div>
+  </footer>
 </body>
 </html>
