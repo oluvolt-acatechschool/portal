@@ -773,9 +773,21 @@ h2,h3{color:var(--nav);margin-top:0}
             <select id="publishClassSelect"></select>
           </div>
         </div>
+        <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+          <button id="publishAllBtn" class="btn success">Publish all students in this class</button>
+          <button id="unpublishAllBtn" class="btn secondary">Unpublish all</button>
+        </div>
         <div id="publishList" style="margin-top:14px"></div>
       </div>
 
+      <div class="subcard">
+        <h3>Result Batches (from the Simulator)</h3>
+        <div class="info">
+          Each class sent from the simulator arrives here as a numbered batch. Approve a batch to save its
+          scores. Reject it to discard it, and then the simulator can send that class again.
+        </div>
+        <div id="batchList"></div>
+      </div>
       <div class="subcard">
         <h3>Score Change Log</h3>
         <div class="info">
@@ -907,6 +919,20 @@ h2,h3{color:var(--nav);margin-top:0}
       <div class="subcard">
         <h3>Existing Quiz Banks</h3>
         <div id="cbtList"></div>
+
+        <div id="cbtEditPanel" class="subcard hidden" style="margin-top:14px">
+          <h3>Edit Quiz Bank</h3>
+          <input id="cbtEditId" type="hidden">
+          <div class="field"><label for="cbtEditTitle">Title</label><input id="cbtEditTitle" type="text"></div>
+          <div class="formgrid" style="margin-top:8px">
+            <div class="field"><label for="cbtEditDuration">Duration (minutes, blank = no limit)</label><input id="cbtEditDuration" type="number" min="1"></div>
+            <div class="field"><label for="cbtEditPerAttempt">Questions per Attempt</label><input id="cbtEditPerAttempt" type="number" min="1"></div>
+            <div class="field"><label for="cbtEditMaxAttempts">Max Attempts (blank = unlimited)</label><input id="cbtEditMaxAttempts" type="number" min="1"></div>
+          </div>
+          <div class="info" style="margin-top:8px">Changes apply to the next attempt a student starts.</div>
+          <button id="cbtEditSaveBtn" class="btn success" style="margin-top:8px">Save Changes</button>
+          <button id="cbtEditCancelBtn" class="btn secondary" style="margin-top:8px">Cancel</button>
+        </div>
       </div>
 
       <div id="cbtDetailPanel" class="subcard hidden">
@@ -1168,6 +1194,7 @@ supa.auth.onAuthStateChange((event) => {
 const LANDING_SECTIONS = ["tab-home", "loginPanel", "teacherPlaceholder", "studentLoginPanel", "tab-parent", "registerPanel", "tab-exam"];
 
 function switchLandingTab(tab){
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   LANDING_SECTIONS.forEach(id => $(id).classList.add("hidden"));
   $("secretMenu").classList.remove("open");
 
@@ -1875,6 +1902,7 @@ $("studentPrintBtn").onclick = () => window.print();
 
 /* ================= STUDENT PORTAL: NAV CARDS ================= */
 function showStudentView(name){
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   document.querySelectorAll(".sview").forEach(v => v.classList.add("hidden"));
   $("sview-" + name).classList.remove("hidden");
   document.querySelectorAll(".student-nav-card").forEach(b => {
@@ -2131,6 +2159,7 @@ $("cbtClassSelect").onchange = updateCbtSubjectSelect;
 
 /* ================= VIEW SWITCHING ================= */
 function showView(name){
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
   $(name + "View").classList.remove("hidden");
   document.querySelectorAll(".nav-card[data-view]").forEach(b => {
@@ -2142,7 +2171,7 @@ function showView(name){
   if(name === "scores") renderScoresTable();
   if(name === "reports") { updateStudentSelect(); loadExtrasForSelectedStudent(); }
   if(name === "ranges") renderRanges();
-  if(name === "history") { renderHistory(); renderPublishList(); }
+  if(name === "history") { renderHistory(); renderPublishList(); renderBatches(); }
   if(name === "exams") { updateExamSubjectSelect(); renderExamList(); }
   if(name === "cbt") { updateCbtSubjectSelect(); renderCbtList(); }
   if(name === "notices") renderNoticesAdmin();
@@ -3020,6 +3049,111 @@ async function renderPublishList(){
 }
 $("publishClassSelect").onchange = renderPublishList;
 
+// Publish or unpause every student in the chosen class who has results this term, in one go.
+async function setClassPublished(state){
+  const classId = Number($("publishClassSelect").value);
+  const students = cache.students.filter(s => s.class_id === classId);
+  if(!students.length){ toast("No students in this class."); return; }
+
+  const { data: withScores, error: scErr } = await supa.from("scores").select("student_id")
+    .eq("session", cache.settings.session).eq("term", cache.settings.term)
+    .in("student_id", students.map(s => s.id));
+  if(scErr){ toast(scErr.message); return; }
+  const ids = [...new Set((withScores || []).map(r => Number(r.student_id)))];
+  if(ids.length === 0){ toast("This class has no results for this term yet."); return; }
+
+  const rows = ids.map(id => ({
+    student_id: id, session: cache.settings.session, term: cache.settings.term,
+    published: state, published_at: state ? new Date().toISOString() : null
+  }));
+  for(let i = 0; i < rows.length; i += 500){
+    const { error } = await supa.from("result_publications").upsert(rows.slice(i, i + 500), { onConflict: "student_id,session,term" });
+    if(error){ toast(error.message); return; }
+  }
+  toast(state ? `Published for ${ids.length} student(s).` : `Unpublished for ${ids.length} student(s).`);
+  renderPublishList();
+}
+$("publishAllBtn").onclick = () => setClassPublished(true);
+$("unpublishAllBtn").onclick = () => setClassPublished(false);
+
+// Button that asks for a second tap before it acts.
+function armedButton(btn, action, label, confirmLabel){
+  let armed = false;
+  btn.onclick = () => {
+    if(!armed){
+      armed = true;
+      btn.textContent = confirmLabel;
+      setTimeout(() => { armed = false; btn.textContent = label; }, 4000);
+      return;
+    }
+    action();
+  };
+}
+
+async function renderBatches(){
+  const box = $("batchList");
+  const { data, error } = await supa.from("score_batches").select("*").order("created_at", { ascending: true });
+  if(error){ box.innerHTML = `<div class="empty">${esc(error.message)}</div>`; return; }
+  if(!data || data.length === 0){
+    box.innerHTML = '<div class="empty">No result batches yet. Batches appear here when the simulator sends a class for approval.</div>';
+    return;
+  }
+
+  // Number batches per class, session and term, in the order they were sent: Batch 1, Batch 2 ...
+  const counter = {};
+  const named = data.map(b => {
+    const key = `${b.class_id}|${b.session}|${b.term}`;
+    counter[key] = (counter[key] || 0) + 1;
+    const klass = cache.classes.find(c => c.id === Number(b.class_id));
+    return { ...b, name: `${klass ? klass.name : "Class"} · ${b.session} · ${b.term} · Batch ${counter[key]}` };
+  }).reverse();
+
+  box.innerHTML = named.map(b => `
+    <div class="student-card" style="align-items:flex-start">
+      <span><strong>${esc(b.name)}</strong>
+        <span class="tag ${b.status === 'pending' ? 'demo' : 'live'}">${esc(b.status.toUpperCase())}</span>
+        <br><small style="color:var(--muted)">${b.row_count} scores · sent ${esc(new Date(b.created_at).toLocaleString())}</small>
+      </span>
+      <span>${b.status === 'pending'
+        ? `<button class="btn success batch-approve" data-id="${b.id}">Approve</button>
+           <button class="btn danger batch-reject" data-id="${b.id}">Reject</button>`
+        : ''}</span>
+    </div>`).join("");
+
+  box.querySelectorAll(".batch-approve").forEach(btn =>
+    armedButton(btn, () => approveBatch(Number(btn.dataset.id)), "Approve", "Confirm: replace scores?"));
+  box.querySelectorAll(".batch-reject").forEach(btn =>
+    armedButton(btn, () => rejectBatch(Number(btn.dataset.id)), "Reject", "Confirm: discard?"));
+}
+
+async function approveBatch(id){
+  const { data: batch, error } = await supa.from("score_batches").select("*").eq("id", id).single();
+  if(error){ toast(error.message); return; }
+  if(batch.status !== "pending"){ toast("This batch has already been handled."); renderBatches(); return; }
+
+  const rows = (batch.payload || []).map(p => ({
+    student_id: p.student_id, subject_id: p.subject_id,
+    session: batch.session, term: batch.term,
+    ca: p.ca, exam: p.exam, source: "simulated"
+  }));
+  for(let i = 0; i < rows.length; i += 500){
+    const { error: e } = await supa.from("scores").upsert(rows.slice(i, i + 500), { onConflict: "student_id,subject_id,session,term" });
+    if(e){ toast("Could not save scores: " + e.message); return; }
+  }
+  const { error: u } = await supa.from("score_batches").update({ status: "approved" }).eq("id", id);
+  if(u){ toast(u.message); return; }
+  toast(`Approved: ${rows.length} scores saved.`);
+  renderBatches();
+  renderScoresTable && typeof renderScoresTable === "function" && renderScoresTable();
+}
+
+async function rejectBatch(id){
+  const { error } = await supa.from("score_batches").delete().eq("id", id);
+  if(error){ toast(error.message); return; }
+  toast("Batch discarded. The simulator can send this class again.");
+  renderBatches();
+}
+
 async function renderHistory(){
   const tbody = $("historyTable").querySelector("tbody");
   tbody.innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
@@ -3277,7 +3411,6 @@ $("createCbtBtn").onclick = async function(){
 
 async function renderCbtList(){
   const { data, error } = await supa.from("quiz_banks").select("*")
-    .eq("session", cache.settings.session).eq("term", cache.settings.term)
     .order("created_at", { ascending: false });
 
   const box = $("cbtList");
@@ -3293,11 +3426,13 @@ async function renderCbtList(){
     row.innerHTML = `
       <span><strong>${esc(bank.title)}</strong>
         <span class="tag ${bank.is_open ? 'live' : 'demo'}">${bank.is_open ? 'OPEN' : 'CLOSED'}</span>
-        <br><small style="color:var(--muted)">${esc(klass ? klass.name : 'All Classes')} · ${esc(subject ? subject.name : '')} · ${bank.questions_per_attempt} Qs/attempt${bank.duration_minutes ? ' · ' + bank.duration_minutes + ' min' : ''} · ${bank.max_attempts ? bank.max_attempts + ' attempt(s) max' : 'Unlimited attempts'}</small>
+        <br><small style="color:var(--muted)">${esc(bank.session)}, ${esc(bank.term)} · ${esc(klass ? klass.name : 'All Classes')} · ${esc(subject ? subject.name : '')} · ${bank.questions_per_attempt} Qs/attempt${bank.duration_minutes ? ' · ' + bank.duration_minutes + ' min' : ''} · ${bank.max_attempts ? bank.max_attempts + ' attempt(s) max' : 'Unlimited attempts'}</small>
       </span>
       <span>
         <button class="btn secondary toggle-cbt-open-btn">${bank.is_open ? 'Close' : 'Open'}</button>
+        <button class="btn secondary edit-cbt-btn">Edit</button>
         <button class="btn primary manage-cbt-btn">Manage</button>
+        <button class="btn danger delete-cbt-btn">Delete</button>
       </span>
     `;
     row.querySelector(".toggle-cbt-open-btn").onclick = async () => {
@@ -3306,9 +3441,58 @@ async function renderCbtList(){
       renderCbtList();
     };
     row.querySelector(".manage-cbt-btn").onclick = () => openCbtDetail(bank, klass, subject);
+    row.querySelector(".edit-cbt-btn").onclick = () => openCbtEdit(bank);
+
+    const delBtn = row.querySelector(".delete-cbt-btn");
+    let armed = false;
+    delBtn.onclick = async () => {
+      if(!armed){
+        armed = true;
+        delBtn.textContent = "Confirm?";
+        setTimeout(() => { armed = false; delBtn.textContent = "Delete"; }, 4000);
+        return;
+      }
+      const { error } = await supa.from("quiz_banks").delete().eq("id", bank.id);
+      if(error){ toast(error.message); return; }
+      if(currentCbtBankId === bank.id) $("cbtDetailPanel").classList.add("hidden");
+      toast("Quiz bank deleted.");
+      renderCbtList();
+    };
     box.appendChild(row);
   });
 }
+
+function openCbtEdit(bank){
+  $("cbtEditPanel").classList.remove("hidden");
+  $("cbtEditId").value = bank.id;
+  $("cbtEditTitle").value = bank.title;
+  $("cbtEditDuration").value = bank.duration_minutes || "";
+  $("cbtEditPerAttempt").value = bank.questions_per_attempt;
+  $("cbtEditMaxAttempts").value = bank.max_attempts || "";
+  $("cbtEditPanel").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+$("cbtEditCancelBtn").onclick = () => $("cbtEditPanel").classList.add("hidden");
+
+$("cbtEditSaveBtn").onclick = async function(){
+  const id = Number($("cbtEditId").value);
+  const title = $("cbtEditTitle").value.trim();
+  const perAttempt = Number($("cbtEditPerAttempt").value);
+  if(!title){ toast("Title cannot be empty."); return; }
+  if(!perAttempt || perAttempt < 1){ toast("Questions per attempt must be at least 1."); return; }
+
+  const { error } = await supa.from("quiz_banks").update({
+    title,
+    duration_minutes: $("cbtEditDuration").value ? Number($("cbtEditDuration").value) : null,
+    questions_per_attempt: perAttempt,
+    max_attempts: $("cbtEditMaxAttempts").value ? Number($("cbtEditMaxAttempts").value) : null
+  }).eq("id", id);
+
+  if(error){ toast(error.message); return; }
+  $("cbtEditPanel").classList.add("hidden");
+  toast("Quiz updated. Changes apply to the next attempt.");
+  renderCbtList();
+};
 
 async function openCbtDetail(bank, klass, subject){
   currentCbtBankId = bank.id;
@@ -3779,6 +3963,9 @@ checkSession();
 </script>
   <footer id="siteFooter" style="max-width:900px;margin:30px auto 20px;padding:20px;background:#fff;border-radius:10px;border:1px solid var(--line);font-size:14px;line-height:1.6">
     <div id="footerInfo" class="hidden">
+      <details>
+        <summary style="cursor:pointer;font-weight:700;font-size:15px">About the School: Vision, Mission &amp; Contact</summary>
+        <div style="padding-top:10px">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
         <div>
           <strong>Our Vision</strong>
@@ -3793,6 +3980,8 @@ checkSession();
           <div id="footerContact" style="padding:4px 0"></div>
         </div>
       </div>
+        </div>
+      </details>
       <details style="margin-top:14px">
         <summary style="cursor:pointer;font-weight:700">School Anthem</summary>
         <div id="footerAnthem" style="white-space:pre-line;padding:8px 0"></div>
