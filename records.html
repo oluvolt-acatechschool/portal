@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OLUVOLT ACATECH SCHOOL · Records</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#0b3d6e;--navy2:#182848;--gold:#c9a227;--ink:#1d2733;--muted:#6b7785;--line:#d9dee5;--paper:#fbfaf6}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:var(--paper)}
+header{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:22px 20px;text-align:center;border-bottom:4px solid var(--gold)}
+header h1{margin:0;font-size:22px;letter-spacing:.5px}
+header p{margin:4px 0 0;font-size:13px;opacity:.85}
+main{max-width:1100px;margin:22px auto;padding:0 14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.card h2{margin:0 0 12px;font-size:19px;color:var(--navy);border-bottom:1px solid var(--line);padding-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input,select{width:100%;padding:10px;border:1px solid #bfc6cc;border-radius:6px;font:inherit;background:#fff}
+button{font:inherit;padding:11px 18px;border:0;border-radius:6px;cursor:pointer;color:#fff;background:var(--navy)}
+button.gold{background:var(--gold);color:var(--ink)}
+button.ghost{background:#eef1f5;color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:14px}
+.note{background:#f4f7fb;border-left:4px solid var(--navy);padding:10px 12px;font-size:14px;margin:14px 0 0}
+.msg{padding:10px 12px;border-radius:6px;margin-top:12px;font-size:14px}
+.msg.ok{background:#e8f5ee;color:#1e7b4a} .msg.bad{background:#fbeaea;color:#a4262c}
+.hidden{display:none}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:13px;background:#fff}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:8px;text-align:center;white-space:nowrap}
+th{background:#eef2f7;color:var(--navy);font-weight:700}
+td.name,th.name{text-align:left;position:sticky;left:0;z-index:1}
+td.name{background:#fff;font-weight:600} th.name{background:#eef2f7}
+tfoot td{background:#f7f9fc;font-weight:700}
+.tot{font-weight:700;color:var(--navy);font-size:15px}
+.sub{color:var(--muted);font-size:11px}
+#rangeTable input{width:110px;padding:6px;border:1px solid #bfc6cc;border-radius:6px;font:inherit;text-align:center}
+#rangeTable td{text-align:center}
+.apply{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}
+.apply > div{width:160px}
+.hdr{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>OLUVOLT ACATECH SCHOOL</h1>
+  <p>Records Office · Staff access only</p>
+</header>
+
+<main>
+  <section id="loginCard" class="card">
+    <h2>Staff Sign-in</h2>
+    <div class="grid">
+      <div><label for="email">Email</label><input id="email" type="email" autocomplete="username"></div>
+      <div><label for="password">Password</label><input id="password" type="password" autocomplete="current-password"></div>
+    </div>
+    <div class="row"><button id="loginBtn">Sign in</button></div>
+    <div id="loginMsg" class="msg bad hidden"></div>
+  </section>
+
+  <div id="app" class="hidden">
+    <section class="card">
+      <h2>Records</h2>
+      <div class="grid">
+        <div><label for="className">Class</label><select id="className"></select></div>
+        <div><label for="session">Session</label><input id="session" disabled></div>
+        <div><label for="term">Term</label><input id="term" disabled></div>
+      </div>
+
+      <div class="note">
+        Set the score range for each subject. Each subject starts from its saved range in Simulation Ranges.
+        Change any subject, or use <strong>Apply to all</strong> to give every subject the same range.
+        Scores are totals out of 100.
+      </div>
+
+      <div class="apply">
+        <div><label for="allMin">Apply to all: minimum</label><input id="allMin" type="number" min="0" max="100" value="70"></div>
+        <div><label for="allMax">Apply to all: maximum</label><input id="allMax" type="number" min="0" max="100" value="90"></div>
+        <button id="applyAllBtn" class="ghost">Apply to all subjects</button>
+      </div>
+
+      <div class="table-wrap"><table id="rangeTable"></table></div>
+
+      <div class="row">
+        <button id="generateBtn" class="gold">Generate results for this class</button>
+        <button id="signOutBtn" class="ghost">Sign out</button>
+      </div>
+      <div id="genMsg" class="msg bad hidden"></div>
+    </section>
+
+    <section id="resultsCard" class="card hidden">
+      <h2>Review</h2>
+      <div class="note">
+        Check the results below. Use <strong>Regenerate</strong> for a new set, then <strong>Send to Admin</strong>.
+        The admin approves the class before anything reaches students.
+      </div>
+      <div id="summary" class="sub" style="margin-top:12px"></div>
+      <div class="table-wrap"><table id="resultTable"></table></div>
+      <div class="row">
+        <button id="regenBtn" class="ghost">Regenerate</button>
+        <button id="sendBtn">Send to Admin</button>
+      </div>
+      <div id="sendMsg" class="msg hidden"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://wgbfdwwbqbcoarmplxoh.supabase.co";
+const SUPABASE_KEY = "sb_publishable_UL7NKpLAbmZFnlV0zJkw0A_J5Cfid9A";
+const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function show(el, on){ el.classList.toggle("hidden", !on); }
+function msg(el, text, ok){ el.textContent = text; el.className = "msg " + (ok ? "ok" : "bad"); show(el, true); }
+
+let settings = null, roster = [], subjects = [], runRanges = {}, lastResults = null, currentClassId = null;
+
+/* ---------- sign-in: only staff administrators may use this page ---------- */
+async function isAdmin(){
+  const { data: { user } } = await supa.auth.getUser();
+  if(!user) return false;
+  const { data } = await supa.from("profiles").select("role").eq("id", user.id).single();
+  return !!data && data.role === "admin";
+}
+
+async function enterApp(){
+  if(!(await isAdmin())){
+    await supa.auth.signOut();
+    msg($("loginMsg"), "This account is not authorised to use this page.", false);
+    return;
+  }
+  show($("loginCard"), false);
+  show($("app"), true);
+  await loadSetup();
+}
+
+$("loginBtn").onclick = async () => {
+  show($("loginMsg"), false);
+  const { error } = await supa.auth.signInWithPassword({
+    email: $("email").value.trim(), password: $("password").value
+  });
+  if(error){ msg($("loginMsg"), error.message, false); return; }
+  enterApp();
+};
+$("password").addEventListener("keydown", e => { if(e.key === "Enter") $("loginBtn").click(); });
+$("signOutBtn").onclick = async () => { await supa.auth.signOut(); location.reload(); };
+supa.auth.getSession().then(({ data }) => { if(data.session) enterApp(); });
+
+/* ---------- setup: session, term, classes, and the first class's ranges ---------- */
+async function loadSetup(){
+  const [s, c] = await Promise.all([
+    supa.from("app_settings").select("session,term").eq("id", 1).single(),
+    supa.from("classes").select("id,name").order("id")
+  ]);
+  if(s.error || c.error){ msg($("genMsg"), (s.error || c.error).message, false); return; }
+  settings = s.data;
+  $("session").value = settings.session;
+  $("term").value = settings.term;
+  $("className").innerHTML = (c.data || []).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  if(c.data && c.data.length) await loadRangeTable(c.data[0].id);
+}
+
+$("className").onchange = () => {
+  show($("resultsCard"), false);
+  lastResults = null;
+  loadRangeTable(Number($("className").value));
+};
+
+/* ---------- one editable minimum and maximum per subject ---------- */
+async function loadRangeTable(classId){
+  show($("genMsg"), false);
+  const [cs, rg] = await Promise.all([
+    supa.from("class_subjects").select("subject_id, subjects(id,name)").eq("class_id", classId),
+    supa.from("score_ranges").select("subject_id,min_score,max_score")
+  ]);
+  if(cs.error || rg.error){ msg($("genMsg"), (cs.error || rg.error).message, false); return; }
+
+  const saved = {};
+  (rg.data || []).forEach(r => { saved[r.subject_id] = r; });
+  const list = (cs.data || [])
+    .filter(x => x.subjects)
+    .map(x => ({ id: x.subjects.id, name: x.subjects.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  if(list.length === 0){
+    $("rangeTable").innerHTML = '<tbody><tr><td class="sub">No subjects are linked to this class yet.</td></tr></tbody>';
+    return;
+  }
+  $("rangeTable").innerHTML =
+    `<thead><tr><th class="name">Subject</th><th>Minimum</th><th>Maximum</th></tr></thead><tbody>` +
+    list.map(s => {
+      const r = saved[s.id];
+      const lo = r ? r.min_score : 70, hi = r ? r.max_score : 90;
+      return `<tr data-sid="${s.id}"><td class="name">${esc(s.name)}</td>` +
+             `<td><input class="rmin" type="number" min="0" max="100" value="${lo}"></td>` +
+             `<td><input class="rmax" type="number" min="0" max="100" value="${hi}"></td></tr>`;
+    }).join("") + `</tbody>`;
+}
+
+$("applyAllBtn").onclick = () => {
+  const lo = Number($("allMin").value), hi = Number($("allMax").value);
+  if(!Number.isFinite(lo) || !Number.isFinite(hi) || lo < 0 || hi > 100 || lo > hi){
+    msg($("genMsg"), "Enter a minimum and maximum between 0 and 100, with the minimum not higher than the maximum.", false);
+    return;
+  }
+  document.querySelectorAll("#rangeTable .rmin").forEach(i => i.value = lo);
+  document.querySelectorAll("#rangeTable .rmax").forEach(i => i.value = hi);
+  show($("genMsg"), false);
+};
+
+// Reads every subject's range from the table and checks each one.
+function readRanges(){
+  const out = {};
+  let error = null;
+  document.querySelectorAll("#rangeTable tr[data-sid]").forEach(tr => {
+    const sid = Number(tr.dataset.sid);
+    const lo = Number(tr.querySelector(".rmin").value);
+    const hi = Number(tr.querySelector(".rmax").value);
+    if(!Number.isFinite(lo) || !Number.isFinite(hi)) error = error || "Every subject needs a minimum and a maximum.";
+    else if(lo < 0 || hi > 100) error = error || "Scores must stay between 0 and 100.";
+    else if(lo > hi) error = error || "A subject's minimum cannot be higher than its maximum.";
+    out[sid] = { lo, hi };
+  });
+  return { out, error };
+}
+
+/* ---------- read the class roster and subject order ---------- */
+async function loadClassData(classId){
+  const [st, cs] = await Promise.all([
+    supa.from("students").select("id,full_name,admission_no").eq("class_id", classId).order("full_name"),
+    supa.from("class_subjects").select("subject_id, subjects(id,name)").eq("class_id", classId)
+  ]);
+  const err = st.error || cs.error;
+  if(err) throw new Error(err.message);
+  roster = st.data || [];
+  subjects = (cs.data || [])
+    .filter(x => x.subjects)
+    .map(x => ({ id: x.subjects.id, name: x.subjects.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/* ---------- simulation ---------- */
+function randInt(lo, hi){ return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+
+// Total is drawn from the subject's range. CA is about 40% of the total (out of 40); exam is the rest (out of 60).
+function simulate(){
+  return roster.map(stu => {
+    const scores = {};
+    subjects.forEach(sub => {
+      const { lo, hi } = runRanges[sub.id] || { lo: 70, hi: 90 };
+      const total = randInt(lo, hi);
+      let ca = Math.max(0, Math.min(40, Math.round(total * 0.4) + randInt(-2, 2)));
+      let exam = total - ca;
+      if(exam > 60){ exam = 60; ca = total - 60; }
+      if(exam < 0){ exam = 0; ca = total; }
+      scores[sub.id] = { ca, exam, total: ca + exam };
+    });
+    return { student: stu, scores };
+  });
+}
+
+/* ---------- generate ---------- */
+$("generateBtn").onclick = async () => {
+  show($("genMsg"), false);
+  const { out, error } = readRanges();
+  if(error){ msg($("genMsg"), error, false); return; }
+
+  const classId = Number($("className").value);
+  if(!classId){ msg($("genMsg"), "Choose a class first.", false); return; }
+
+  const btn = $("generateBtn");
+  btn.disabled = true; btn.textContent = "Loading class…";
+  try{
+    await loadClassData(classId);
+    if(roster.length === 0){ msg($("genMsg"), "This class has no students yet.", false); return; }
+    if(subjects.length === 0){ msg($("genMsg"), "This class has no subjects linked yet.", false); return; }
+    currentClassId = classId;
+    runRanges = out;
+    lastResults = simulate();
+    renderResults();
+  }catch(e){
+    msg($("genMsg"), e.message, false);
+  }finally{
+    btn.disabled = false; btn.textContent = "Generate results for this class";
+  }
+};
+
+$("regenBtn").onclick = () => {
+  if(!roster.length) return;
+  lastResults = simulate();
+  renderResults();
+};
+
+/* ---------- review table with averages ---------- */
+function studentAverage(r){
+  const totals = subjects.map(s => r.scores[s.id].total);
+  return totals.length ? totals.reduce((a, b) => a + b, 0) / totals.length : 0;
+}
+
+function renderResults(){
+  show($("resultsCard"), true);
+  show($("sendMsg"), false);
+  const className = $("className").options[$("className").selectedIndex].text;
+  $("summary").textContent = `${className} · ${settings.session} · ${settings.term} · ${roster.length} students · ${subjects.length} subjects`;
+
+  const head = `<thead><tr><th class="name">Student</th>${subjects.map(s => `<th>${esc(s.name)}</th>`).join("")}<th>Average</th></tr></thead>`;
+
+  const body = lastResults.map(r => `
+    <tr>
+      <td class="name">${esc(r.student.full_name)}<div class="sub">${esc(r.student.admission_no || "")}</div></td>
+      ${subjects.map(s => {
+        const sc = r.scores[s.id];
+        return `<td><div class="tot">${sc.total}</div><div class="sub">${sc.ca} + ${sc.exam}</div></td>`;
+      }).join("")}
+      <td><div class="tot">${studentAverage(r).toFixed(1)}</div></td>
+    </tr>`).join("");
+
+  const foot = `<tfoot><tr><td class="name">Subject average</td>${subjects.map(s => {
+      const totals = lastResults.map(r => r.scores[s.id].total);
+      const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
+      return `<td>${avg.toFixed(1)}</td>`;
+    }).join("")}<td>${(lastResults.reduce((a, r) => a + studentAverage(r), 0) / lastResults.length).toFixed(1)}</td></tr></tfoot>`;
+
+  $("resultTable").innerHTML = head + `<tbody>${body}</tbody>` + foot;
+}
+
+/* ---------- send to admin ---------- */
+$("sendBtn").onclick = async () => {
+  if(!lastResults) return;
+  const btn = $("sendBtn");
+  btn.disabled = true;
+  try{
+    // One waiting batch per class and term. The admin rejects it to send again.
+    const { data: waiting, error: checkErr } = await supa.from("score_batches").select("id")
+      .eq("class_id", currentClassId).eq("session", settings.session)
+      .eq("term", settings.term).eq("status", "pending").limit(1);
+    if(checkErr) throw new Error(checkErr.message);
+    if(waiting && waiting.length){
+      msg($("sendMsg"), "A batch for this class is already waiting for approval. It must be approved or rejected first.", false);
+      return;
+    }
+
+    const payload = [];
+    lastResults.forEach(r => subjects.forEach(s => {
+      const sc = r.scores[s.id];
+      payload.push({ student_id: r.student.id, subject_id: s.id, ca: sc.ca, exam: sc.exam });
+    }));
+
+    const { error } = await supa.from("score_batches").insert({
+      class_id: currentClassId, session: settings.session, term: settings.term,
+      row_count: payload.length, payload
+    });
+    if(error) throw new Error(error.message);
+
+    msg($("sendMsg"), `Sent for approval (${payload.length} scores). You can choose another class now.`, true);
+  }catch(e){
+    msg($("sendMsg"), e.message, false);
+  }finally{
+    btn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
