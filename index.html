@@ -1133,12 +1133,22 @@ h2,h3{color:var(--nav);margin-top:0}
         </div>
         <button id="addQuestionBtn" class="btn secondary" style="margin-top:8px">Add Question</button>
 
-        <div class="table-wrap" style="margin-top:14px">
+        <details id="qListDetails" style="margin-top:14px">
+          <summary style="cursor:pointer;font-weight:700;padding:6px 0">Questions (<span id="qListCount">0</span>) · tap to open</summary>
+          <input id="qSearch" type="search" placeholder="Search questions" style="width:100%;padding:8px;margin:8px 0">
+          <div class="table-wrap">
           <table class="data" id="questionsTable">
             <thead><tr><th>#</th><th>Question</th><th>Correct</th><th>Marks</th><th>Actions</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button id="qPrevBtn" class="btn secondary">Previous</button>
+            <span id="qPageLabel" style="font-size:13px;color:#6b7785"></span>
+            <button id="qNextBtn" class="btn secondary">Next</button>
+          </div>
+        </details>
 
         <h4 style="margin-top:20px">Submissions</h4>
         <div class="table-wrap">
@@ -1341,12 +1351,48 @@ h2,h3{color:var(--nav);margin-top:0}
         <h4>Video</h4>
         <div id="asgVideoPreview"></div>
 
+        <div class="subcard" style="margin-top:10px">
+          <h4>Assignment settings</h4>
+          <div class="formgrid">
+            <div class="field"><label for="asgSetTime">Time limit in minutes (blank = none)</label><input id="asgSetTime" type="number" min="1"></div>
+            <div class="field"><label for="asgSetPer">Questions per student</label><input id="asgSetPer" type="number" min="1"></div>
+          </div>
+          <button id="asgSetSave" class="btn success" style="margin-top:8px">Save settings</button>
+        </div>
+
+        <div class="subcard" style="margin-top:14px">
+          <h4>Assignment details</h4>
+          <div class="formgrid">
+            <div class="field"><label for="asgEmTitle">Title</label><input id="asgEmTitle" type="text"></div>
+            <div class="field"><label for="asgEmTime">Time limit in minutes (blank = none)</label><input id="asgEmTime" type="number" min="1"></div>
+            <div class="field"><label for="asgEmPer">Questions per student</label><input id="asgEmPer" type="number" min="1"></div>
+            <div class="field"><label for="asgEmVideo">YouTube link (optional)</label><input id="asgEmVideo" type="url"></div>
+          </div>
+          <button id="asgEmSave" class="btn success" style="margin-top:8px">Save assignment details</button>
+        </div>
+
         <h4 style="margin-top:14px">Questions (<span id="asgQCount">0</span>)</h4>
         <div class="table-wrap">
           <table class="data" id="asgQTable">
-            <thead><tr><th>#</th><th>Question</th><th>Correct</th><th>Marks</th></tr></thead>
+            <thead><tr><th>#</th><th>Question</th><th>Correct</th><th>Marks</th><th>Actions</th></tr></thead>
             <tbody></tbody>
           </table>
+        </div>
+
+        <div id="asgQEdit" class="subcard hidden" style="margin-top:10px">
+          <h4>Edit question</h4>
+          <input id="aqId" type="hidden">
+          <div class="field"><label for="aqText">Question</label><input id="aqText" type="text"></div>
+          <div class="formgrid" style="margin-top:8px">
+            <div class="field"><label for="aqA">Option A</label><input id="aqA" type="text"></div>
+            <div class="field"><label for="aqB">Option B</label><input id="aqB" type="text"></div>
+            <div class="field"><label for="aqC">Option C</label><input id="aqC" type="text"></div>
+            <div class="field"><label for="aqD">Option D</label><input id="aqD" type="text"></div>
+            <div class="field"><label for="aqCorrect">Correct option</label><select id="aqCorrect"><option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option></select></div>
+            <div class="field"><label for="aqMarks">Marks</label><input id="aqMarks" type="number" min="1"></div>
+          </div>
+          <button id="aqSave" class="btn success" style="margin-top:8px">Save question</button>
+          <button id="aqCancel" class="btn secondary" style="margin-top:8px">Cancel</button>
         </div>
 
         <h4 style="margin-top:14px">Add one question</h4>
@@ -4499,6 +4545,7 @@ async function openExamDetail(exam, klass, subject){
   $("emDuration").value = exam.duration_minutes || "";
   $("emPerStudent").value = exam.questions_per_student || "";
   $("emKind").value = exam.kind || "exam";
+  qPage = 0; qSearch = ""; $("qSearch").value = "";
   $("rcCount").value = "";
   $("rcTime").value = exam.duration_minutes || "";
   rcLoadTargets();
@@ -4581,18 +4628,44 @@ $("rcTextBtn").onclick = async () => {
   }
 };
 
+let qPage = 0;
+let qSearch = "";
+const Q_PAGE_SIZE = 10;
+
 async function renderQuestionsTable(){
   const { data } = await supa.from("exam_questions").select("*").eq("exam_id", currentExamId).order("position");
   examQRows = data || [];
+  $("qListCount").textContent = examQRows.length;
+  drawQuestionPage();
+}
+
+// Draws one page of questions, filtered by the search box. Numbers always refer to the full list.
+function drawQuestionPage(){
+  const q = qSearch.trim().toLowerCase();
+  const matches = examQRows
+    .map((row, idx) => ({ row, n: idx + 1 }))
+    .filter(x => !q || x.row.question_text.toLowerCase().includes(q));
+
+  const pages = Math.max(1, Math.ceil(matches.length / Q_PAGE_SIZE));
+  if(qPage > pages - 1) qPage = pages - 1;
+  if(qPage < 0) qPage = 0;
+  const slice = matches.slice(qPage * Q_PAGE_SIZE, qPage * Q_PAGE_SIZE + Q_PAGE_SIZE);
+
   const tbody = $("questionsTable").querySelector("tbody");
-  tbody.innerHTML = examQRows.map((q, i) => `<tr>
-      <td>${i + 1}</td><td style="text-align:left">${esc(q.question_text)}</td>
-      <td>${esc(q.correct_option.toUpperCase())}</td><td>${q.marks}</td>
+  tbody.innerHTML = slice.map(({ row: x, n }) => `<tr>
+      <td>${n}</td><td style="text-align:left">${esc(x.question_text)}</td>
+      <td>${esc(x.correct_option.toUpperCase())}</td><td>${x.marks}</td>
       <td style="white-space:nowrap">
-        <button class="btn secondary eq-edit" data-id="${q.id}" style="padding:4px 8px;font-size:12px">Edit</button>
-        <button class="btn danger eq-del" data-id="${q.id}" style="padding:4px 8px;font-size:12px">Delete</button>
+        <button class="btn secondary eq-edit" data-id="${x.id}" style="padding:4px 8px;font-size:12px">Edit</button>
+        <button class="btn danger eq-del" data-id="${x.id}" style="padding:4px 8px;font-size:12px">Delete</button>
       </td></tr>`).join("")
-    || '<tr><td colspan="5" class="empty">No questions yet.</td></tr>';
+    || '<tr><td colspan="5" class="empty">No questions match.</td></tr>';
+
+  $("qPageLabel").textContent = matches.length
+    ? `Page ${qPage + 1} of ${pages} · ${matches.length} shown`
+    : "";
+  $("qPrevBtn").disabled = qPage === 0;
+  $("qNextBtn").disabled = qPage >= pages - 1;
 
   tbody.querySelectorAll(".eq-edit").forEach(btn => {
     btn.onclick = () => openQuestionEdit(examQRows.find(x => x.id === Number(btn.dataset.id)));
@@ -4612,6 +4685,10 @@ async function renderQuestionsTable(){
     };
   });
 }
+
+$("qSearch").oninput = () => { qSearch = $("qSearch").value; qPage = 0; drawQuestionPage(); };
+$("qPrevBtn").onclick = () => { qPage--; drawQuestionPage(); };
+$("qNextBtn").onclick = () => { qPage++; drawQuestionPage(); };
 
 function openQuestionEdit(q){
   if(!q) return;
@@ -4644,6 +4721,51 @@ $("eqSave").onclick = async () => {
   renderQuestionsTable();
 };
 $("eqCancel").onclick = () => show($("examQEdit"), false);
+
+function openAsgQuestionEdit(q){
+  if(!q) return;
+  $("aqId").value = q.id;
+  $("aqText").value = q.question_text;
+  $("aqA").value = q.option_a; $("aqB").value = q.option_b;
+  $("aqC").value = q.option_c; $("aqD").value = q.option_d;
+  $("aqCorrect").value = q.correct_option;
+  $("aqMarks").value = q.marks;
+  show($("asgQEdit"), true);
+  $("asgQEdit").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+$("aqSave").onclick = async () => {
+  const payload = {
+    question_text: $("aqText").value.trim(),
+    option_a: $("aqA").value.trim(), option_b: $("aqB").value.trim(),
+    option_c: $("aqC").value.trim(), option_d: $("aqD").value.trim(),
+    correct_option: $("aqCorrect").value,
+    marks: Number($("aqMarks").value) || 1
+  };
+  if(!payload.question_text || !payload.option_a || !payload.option_b || !payload.option_c || !payload.option_d){
+    toast("Fill in the question and all four options.");
+    return;
+  }
+  const { error } = await supa.from("assignment_questions").update(payload).eq("id", Number($("aqId").value));
+  if(error){ toast(error.message); return; }
+  show($("asgQEdit"), false);
+  toast("Question saved.");
+  renderAsgQuestions();
+};
+$("aqCancel").onclick = () => show($("asgQEdit"), false);
+
+// Time limit and questions per student for the assignment
+$("asgSetSave").onclick = async () => {
+  const per = Number($("asgSetPer").value);
+  if(!per || per < 1){ toast("Questions per student must be at least 1."); return; }
+  const { error } = await supa.from("assignments").update({
+    time_limit_minutes: $("asgSetTime").value ? Number($("asgSetTime").value) : null,
+    questions_per_student: per
+  }).eq("id", asgManageId);
+  if(error){ toast(error.message); return; }
+  toast("Assignment settings saved.");
+  renderAsgList();
+};
 
 let examTabKind = "test";
 
@@ -5557,7 +5679,34 @@ async function renderAsgList(){
   });
 }
 
+
+$("asgEmSave").onclick = async () => {
+  if(!asgManageId){ toast("Open an assignment with Manage first."); return; }
+  const title = $("asgEmTitle").value.trim();
+  const video = $("asgEmVideo").value.trim();
+  const per = Number($("asgEmPer").value);
+  if(!title){ toast("Enter a title."); return; }
+  if(!per || per < 1){ toast("Questions per student must be at least 1."); return; }
+  if(video && !youtubeId(video)){ toast("That does not look like a YouTube link."); return; }
+
+  const { error } = await supa.from("assignments").update({
+    title,
+    video_url: video || null,
+    questions_per_student: per,
+    time_limit_minutes: $("asgEmTime").value ? Number($("asgEmTime").value) : null
+  }).eq("id", asgManageId);
+  if(error){ toast(error.message); return; }
+
+  $("asgManageTitle").textContent = title;
+  toast("Assignment details saved.");
+  renderAsgList();
+};
+
 async function openAsgManage(a){
+  $("asgEmTitle").value = a.title || "";
+  $("asgEmTime").value = a.time_limit_minutes || "";
+  $("asgEmPer").value = a.questions_per_student || "";
+  $("asgEmVideo").value = a.video_url || "";
   asgManageId = a.id;
   show($("asgManagePanel"), true);
   const klass = cache.classes.find(c => c.id === Number(a.class_id));
@@ -5567,17 +5716,46 @@ async function openAsgManage(a){
   $("asgVideoPreview").innerHTML = id
     ? `<iframe width="100%" height="315" src="https://www.youtube-nocookie.com/embed/${id}" frameborder="0" allowfullscreen></iframe>`
     : '<div class="empty">No video link on this assignment.</div>';
+  $("asgSetTime").value = a.time_limit_minutes || "";
+  $("asgSetPer").value = a.questions_per_student || 10;
+  show($("asgQEdit"), false);
   $("asgManagePanel").scrollIntoView({ behavior: "smooth", block: "start" });
   await Promise.all([renderAsgQuestions(), renderAsgSubmissions()]);
 }
 
+let asgQRows = [];
+
 async function renderAsgQuestions(){
   const { data } = await supa.from("assignment_questions").select("*").eq("assignment_id", asgManageId).order("id");
-  const rows = data || [];
-  $("asgQCount").textContent = rows.length;
-  $("asgQTable").querySelector("tbody").innerHTML = rows.map((q, i) =>
-    `<tr><td>${i + 1}</td><td style="text-align:left">${esc(q.question_text)}</td><td>${esc(q.correct_option.toUpperCase())}</td><td>${q.marks}</td></tr>`
-  ).join("") || '<tr><td colspan="4" class="empty">No questions yet.</td></tr>';
+  asgQRows = data || [];
+  $("asgQCount").textContent = asgQRows.length;
+  const tbody = $("asgQTable").querySelector("tbody");
+  tbody.innerHTML = asgQRows.map((q, i) => `<tr>
+      <td>${i + 1}</td><td style="text-align:left">${esc(q.question_text)}</td>
+      <td>${esc(q.correct_option.toUpperCase())}</td><td>${q.marks}</td>
+      <td style="white-space:nowrap">
+        <button class="btn secondary aq-edit" data-id="${q.id}" style="padding:4px 8px;font-size:12px">Edit</button>
+        <button class="btn danger aq-del" data-id="${q.id}" style="padding:4px 8px;font-size:12px">Delete</button>
+      </td></tr>`).join("")
+    || '<tr><td colspan="5" class="empty">No questions yet.</td></tr>';
+
+  tbody.querySelectorAll(".aq-edit").forEach(btn => {
+    btn.onclick = () => openAsgQuestionEdit(asgQRows.find(x => x.id === Number(btn.dataset.id)));
+  });
+  tbody.querySelectorAll(".aq-del").forEach(btn => {
+    let armed = false;
+    btn.onclick = async () => {
+      if(!armed){
+        armed = true; btn.textContent = "Confirm?";
+        setTimeout(() => { armed = false; btn.textContent = "Delete"; }, 4000);
+        return;
+      }
+      const { error } = await supa.from("assignment_questions").delete().eq("id", Number(btn.dataset.id));
+      if(error){ toast(error.message); return; }
+      toast("Question deleted.");
+      renderAsgQuestions();
+    };
+  });
 }
 
 $("asgAddQBtn").onclick = async () => {
